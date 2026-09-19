@@ -1,0 +1,90 @@
+import argparse
+import sys
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+from douyin_transcriber.extractor import AudioExtractor, InvalidURLError
+from douyin_transcriber.formatter import OutputFormatter
+from douyin_transcriber.transcriber import MissingAPIKeyError, Transcriber
+
+
+def main():
+    load_dotenv()
+
+    parser = argparse.ArgumentParser(
+        description="从抖音链接提取语音转录"
+    )
+    parser.add_argument(
+        "url",
+        help="抖音分享链接"
+    )
+    parser.add_argument(
+        "--timestamps",
+        action="store_true",
+        help="输出带时间戳的转录文本"
+    )
+    parser.add_argument(
+        "-o", "--output",
+        help="指定输出文件路径（默认: douyin_<video_id>.txt）"
+    )
+    parser.add_argument(
+        "--cookies",
+        help="cookies 文件路径（Netscape 格式，用于访问需要登录的视频）"
+    )
+    parser.add_argument(
+        "--cookies-from-browser",
+        choices=["chrome", "edge", "firefox", "opera", "brave"],
+        help="从浏览器自动提取 cookies（需关闭对应浏览器）"
+    )
+    args = parser.parse_args()
+
+    extractor = AudioExtractor()
+    transcriber = Transcriber()
+
+    cookies_path = Path(args.cookies) if args.cookies else None
+
+    audio_path = None
+    try:
+        print("正在提取音频…", file=sys.stderr)
+        audio_path = extractor.extract(
+            args.url,
+            cookies_path=cookies_path,
+            cookies_from_browser=args.cookies_from_browser,
+        )
+
+        print("正在转录…", file=sys.stderr)
+        result = transcriber.transcribe(audio_path)
+
+        if args.timestamps:
+            text = OutputFormatter.format_with_timestamps(result)
+        else:
+            text = OutputFormatter.format_plain_text(result)
+
+        if args.output:
+            output_file = Path(args.output)
+        else:
+            output_file = Path.cwd() / f"douyin_{result.video_id}.txt"
+
+        if output_file.exists():
+            print(f"文件已存在: {output_file}", file=sys.stderr)
+            sys.exit(1)
+
+        output_file.write_text(text, encoding="utf-8")
+        print(f"已保存到 {output_file}", file=sys.stderr)
+    except MissingAPIKeyError:
+        print("请设置环境变量 MINIMAX_API_KEY", file=sys.stderr)
+        sys.exit(1)
+    except InvalidURLError:
+        print("仅支持抖音链接", file=sys.stderr)
+        sys.exit(1)
+    except Exception:
+        print("视频不可用", file=sys.stderr)
+        sys.exit(1)
+    finally:
+        if audio_path and audio_path.exists():
+            audio_path.unlink()
+
+
+if __name__ == "__main__":
+    main()
