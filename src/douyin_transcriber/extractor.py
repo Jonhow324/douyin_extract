@@ -1,5 +1,4 @@
 import shutil
-import tempfile
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -21,8 +20,9 @@ class AudioExtractor:
     def extract(self, url: str, cookies_path: Path | None = None, cookies_from_browser: str | None = None) -> Path:
         self._validate_url(url)
 
-        temp_dir = Path(tempfile.gettempdir())
-        output_template = str(temp_dir / "douyin_%(id)s.%(ext)s")
+        output_dir = Path("outputs/audio")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_template = str(output_dir / "douyin_%(id)s.%(ext)s")
 
         ydl_opts = {
             "format": "bestaudio/best",
@@ -49,7 +49,7 @@ class AudioExtractor:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             video_id = info["id"]
-            audio_path = temp_dir / f"douyin_{video_id}.mp3"
+            audio_path = output_dir / f"douyin_{video_id}.mp3"
             return audio_path
 
     def _validate_url(self, url: str) -> None:

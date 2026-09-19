@@ -44,7 +44,6 @@ def main():
 
     cookies_path = Path(args.cookies) if args.cookies else None
 
-    audio_path = None
     try:
         print("正在提取音频…", file=sys.stderr)
         audio_path = extractor.extract(
@@ -64,7 +63,9 @@ def main():
         if args.output:
             output_file = Path(args.output)
         else:
-            output_file = Path.cwd() / f"douyin_{result.video_id}.txt"
+            output_dir = Path("outputs/text")
+            output_dir.mkdir(parents=True, exist_ok=True)
+            output_file = output_dir / f"douyin_{result.video_id}.txt"
 
         if output_file.exists():
             print(f"文件已存在: {output_file}", file=sys.stderr)
@@ -81,9 +82,6 @@ def main():
     except Exception:
         print("视频不可用", file=sys.stderr)
         sys.exit(1)
-    finally:
-        if audio_path and audio_path.exists():
-            audio_path.unlink()
 
 
 if __name__ == "__main__":

@@ -35,16 +35,19 @@ class TestCLI:
             )
             mock_transcriber.transcribe.return_value = result
 
-            with patch("douyin_transcriber.cli.Path.cwd", return_value=tmp_path):
+            import os
+            old_cwd = os.getcwd()
+            try:
+                os.chdir(tmp_path)
                 main()
+            finally:
+                os.chdir(old_cwd)
 
-            output_file = tmp_path / "douyin_video_abc.txt"
+            output_file = tmp_path / "outputs" / "text" / "douyin_video_abc.txt"
             assert output_file.exists()
             content = output_file.read_text(encoding="utf-8")
             assert "大家好" in content
             assert "今天聊一下" in content
-
-            assert not audio_path.exists()
 
     def test_main_pipeline_cleans_up_on_error(self, tmp_path):
         with patch("douyin_transcriber.cli.AudioExtractor") as mock_extractor_cls, \
@@ -67,8 +70,6 @@ class TestCLI:
                     main()
                 assert exc_info.value.code == 1
 
-            assert not audio_path.exists()
-
     def test_main_output_filename_format(self, tmp_path):
         with patch("douyin_transcriber.cli.AudioExtractor") as mock_extractor_cls, \
              patch("douyin_transcriber.cli.Transcriber") as mock_transcriber_cls, \
@@ -90,10 +91,15 @@ class TestCLI:
             )
             mock_transcriber.transcribe.return_value = result
 
-            with patch("douyin_transcriber.cli.Path.cwd", return_value=tmp_path):
+            import os
+            old_cwd = os.getcwd()
+            try:
+                os.chdir(tmp_path)
                 main()
+            finally:
+                os.chdir(old_cwd)
 
-            output_file = tmp_path / "douyin_test_id_123.txt"
+            output_file = tmp_path / "outputs" / "text" / "douyin_test_id_123.txt"
             assert output_file.exists()
 
     def test_main_plain_text_no_timestamps(self, tmp_path):
@@ -119,10 +125,15 @@ class TestCLI:
             )
             mock_transcriber.transcribe.return_value = result
 
-            with patch("douyin_transcriber.cli.Path.cwd", return_value=tmp_path):
+            import os
+            old_cwd = os.getcwd()
+            try:
+                os.chdir(tmp_path)
                 main()
+            finally:
+                os.chdir(old_cwd)
 
-            output_file = tmp_path / "douyin_vid.txt"
+            output_file = tmp_path / "outputs" / "text" / "douyin_vid.txt"
             content = output_file.read_text(encoding="utf-8")
             assert "有时间戳的文字" in content
             assert "[" not in content
@@ -193,8 +204,13 @@ class TestCLI:
             )
             mock_transcriber.transcribe.return_value = result
 
-            with patch("douyin_transcriber.cli.Path.cwd", return_value=tmp_path):
+            import os
+            old_cwd = os.getcwd()
+            try:
+                os.chdir(tmp_path)
                 main()
+            finally:
+                os.chdir(old_cwd)
 
             captured = capsys.readouterr()
             assert "正在提取音频" in captured.err
@@ -228,10 +244,15 @@ class TestCLI:
             )
             mock_transcriber.transcribe.return_value = result
 
-            with patch("douyin_transcriber.cli.Path.cwd", return_value=tmp_path):
+            import os
+            old_cwd = os.getcwd()
+            try:
+                os.chdir(tmp_path)
                 main()
+            finally:
+                os.chdir(old_cwd)
 
-            output_file = tmp_path / "douyin_ts_test.txt"
+            output_file = tmp_path / "outputs" / "text" / "douyin_ts_test.txt"
             content = output_file.read_text(encoding="utf-8")
             assert "[00:00] 大家好" in content
             assert "[00:03] 今天聊一下" in content
@@ -299,5 +320,3 @@ class TestCLI:
 
             captured = capsys.readouterr()
             assert "文件已存在" in captured.err
-
-            assert not audio_path.exists()
