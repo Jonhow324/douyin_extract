@@ -7,3 +7,4 @@ dist/
 build/
 .scratch/
 douyin_cookies.txt
+outputs/
