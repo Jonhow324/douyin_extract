@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from douyin_transcriber import TranscriptionResult, TranscriptionSegment
 from douyin_transcriber.transcriber import MissingAPIKeyError, Transcriber
 
 
@@ -20,15 +19,17 @@ class TestTranscriber:
             with pytest.raises(MissingAPIKeyError, match="MINIMAX_API_KEY"):
                 transcriber.transcribe(audio_path)
 
-    def test_transcribe_success_with_timestamps(self, tmp_path):
+    def test_transcribe_success_with_segments(self, tmp_path):
         with patch.dict(os.environ, {"MINIMAX_API_KEY": "test_key_123"}):
             with patch("douyin_transcriber.transcriber.httpx.Client") as mock_client:
                 mock_response = MagicMock()
                 mock_response.status_code = 200
                 mock_response.json.return_value = {
+                    "text": "大家好今天聊一下",
+                    "duration": 10.5,
                     "segments": [
-                        {"text": "大家好", "start": 0.0, "end": 2.5},
-                        {"text": "今天聊一下", "start": 3.0, "end": 8.5},
+                        {"text": "大家好", "start": 0.0, "end": 2.5, "speaker": "S1"},
+                        {"text": "今天聊一下", "start": 3.0, "end": 8.5, "speaker": "S1"},
                     ]
                 }
 
@@ -38,22 +39,22 @@ class TestTranscriber:
                 mock_client.return_value = mock_instance
 
                 transcriber = Transcriber()
-                audio_path = tmp_path / "test.mp3"
+                audio_path = tmp_path / "douyin_test.mp3"
                 audio_path.write_bytes(b"fake audio content")
 
-                result = transcriber.transcribe(audio_path)
+                data, video_id = transcriber.transcribe(audio_path)
 
-                assert isinstance(result, TranscriptionResult)
-                assert len(result.segments) == 2
-                assert result.segments[0].text == "大家好"
-                assert result.segments[0].start == 0.0
-                assert result.segments[0].end == 2.5
-                assert result.segments[1].text == "今天聊一下"
-                assert result.segments[1].start == 3.0
+                assert video_id == "test"
+                assert data["text"] == "大家好今天聊一下"
+                assert data["duration"] == 10.5
+                assert len(data["segments"]) == 2
+                assert data["segments"][0]["text"] == "大家好"
+                assert data["segments"][0]["start"] == 0.0
+                assert data["segments"][0]["speaker"] == "S1"
 
                 mock_instance.post.assert_called_once()
 
-    def test_transcribe_success_without_timestamps(self, tmp_path):
+    def test_transcribe_success_without_segments(self, tmp_path):
         with patch.dict(os.environ, {"MINIMAX_API_KEY": "test_key"}):
             with patch("douyin_transcriber.transcriber.httpx.Client") as mock_client:
                 mock_response = MagicMock()
@@ -68,16 +69,13 @@ class TestTranscriber:
                 mock_client.return_value = mock_instance
 
                 transcriber = Transcriber()
-                audio_path = tmp_path / "test.mp3"
+                audio_path = tmp_path / "douyin_test.mp3"
                 audio_path.write_bytes(b"fake audio")
 
-                result = transcriber.transcribe(audio_path)
+                data, video_id = transcriber.transcribe(audio_path)
 
-                assert isinstance(result, TranscriptionResult)
-                assert len(result.segments) == 1
-                assert result.segments[0].text == "完整的转录文本"
-                assert result.segments[0].start is None
-                assert result.segments[0].end is None
+                assert video_id == "test"
+                assert data["text"] == "完整的转录文本"
 
     def test_transcribe_api_error_response(self, tmp_path):
         with patch.dict(os.environ, {"MINIMAX_API_KEY": "test_key"}):
@@ -111,7 +109,7 @@ class TestTranscriber:
                 mock_client.return_value = mock_instance
 
                 transcriber = Transcriber()
-                audio_path = tmp_path / "audio.mp3"
+                audio_path = tmp_path / "douyin_audio.mp3"
                 audio_path.write_bytes(b"audio data")
 
                 transcriber.transcribe(audio_path)

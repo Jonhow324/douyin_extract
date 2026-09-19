@@ -1,11 +1,11 @@
 import argparse
+import json
 import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 from douyin_transcriber.extractor import AudioExtractor, InvalidURLError
-from douyin_transcriber.formatter import OutputFormatter
 from douyin_transcriber.transcriber import MissingAPIKeyError, Transcriber
 
 
@@ -20,13 +20,8 @@ def main():
         help="抖音分享链接"
     )
     parser.add_argument(
-        "--timestamps",
-        action="store_true",
-        help="输出带时间戳的转录文本"
-    )
-    parser.add_argument(
         "-o", "--output",
-        help="指定输出文件路径（默认: douyin_<video_id>.txt）"
+        help="指定输出文件路径（默认: douyin_<video_id>.json）"
     )
     parser.add_argument(
         "--cookies",
@@ -53,26 +48,26 @@ def main():
         )
 
         print("正在转录…", file=sys.stderr)
-        result = transcriber.transcribe(audio_path)
-
-        if args.timestamps:
-            text = OutputFormatter.format_with_timestamps(result)
-        else:
-            text = OutputFormatter.format_plain_text(result)
+        data, video_id = transcriber.transcribe(audio_path)
 
         if args.output:
             output_file = Path(args.output)
         else:
-            output_dir = Path("outputs/text")
+            output_dir = Path("outputs/json")
             output_dir.mkdir(parents=True, exist_ok=True)
-            output_file = output_dir / f"douyin_{result.video_id}.txt"
+            output_file = output_dir / f"douyin_{video_id}.json"
 
         if output_file.exists():
             print(f"文件已存在: {output_file}", file=sys.stderr)
             sys.exit(1)
 
-        output_file.write_text(text, encoding="utf-8")
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
         print(f"已保存到 {output_file}", file=sys.stderr)
+
+        if audio_path.exists():
+            audio_path.unlink()
+            print(f"已清理音频文件: {audio_path}", file=sys.stderr)
     except MissingAPIKeyError:
         print("请设置环境变量 MINIMAX_API_KEY", file=sys.stderr)
         sys.exit(1)

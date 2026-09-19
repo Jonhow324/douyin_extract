@@ -1,10 +1,10 @@
+import json
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from douyin_transcriber import TranscriptionResult, TranscriptionSegment
 from douyin_transcriber.cli import main
 from douyin_transcriber.extractor import InvalidURLError
 from douyin_transcriber.transcriber import MissingAPIKeyError
@@ -26,14 +26,15 @@ class TestCLI:
             mock_transcriber = MagicMock()
             mock_transcriber_cls.return_value = mock_transcriber
 
-            result = TranscriptionResult(
-                segments=[
-                    TranscriptionSegment(text="大家好"),
-                    TranscriptionSegment(text="今天聊一下"),
-                ],
-                video_id="video_abc"
-            )
-            mock_transcriber.transcribe.return_value = result
+            api_response = {
+                "text": "大家好今天聊一下",
+                "duration": 10.5,
+                "segments": [
+                    {"text": "大家好", "start": 0.0, "end": 2.5, "speaker": "S1"},
+                    {"text": "今天聊一下", "start": 3.0, "end": 8.5, "speaker": "S1"},
+                ]
+            }
+            mock_transcriber.transcribe.return_value = (api_response, "video_abc")
 
             import os
             old_cwd = os.getcwd()
@@ -43,11 +44,12 @@ class TestCLI:
             finally:
                 os.chdir(old_cwd)
 
-            output_file = tmp_path / "outputs" / "text" / "douyin_video_abc.txt"
+            output_file = tmp_path / "outputs" / "json" / "douyin_video_abc.json"
             assert output_file.exists()
-            content = output_file.read_text(encoding="utf-8")
-            assert "大家好" in content
-            assert "今天聊一下" in content
+            content = json.loads(output_file.read_text(encoding="utf-8"))
+            assert content["text"] == "大家好今天聊一下"
+            assert len(content["segments"]) == 2
+            assert content["segments"][0]["text"] == "大家好"
 
     def test_main_pipeline_cleans_up_on_error(self, tmp_path):
         with patch("douyin_transcriber.cli.AudioExtractor") as mock_extractor_cls, \
@@ -85,11 +87,8 @@ class TestCLI:
             mock_transcriber = MagicMock()
             mock_transcriber_cls.return_value = mock_transcriber
 
-            result = TranscriptionResult(
-                segments=[TranscriptionSegment(text="测试")],
-                video_id="test_id_123"
-            )
-            mock_transcriber.transcribe.return_value = result
+            api_response = {"text": "测试", "segments": []}
+            mock_transcriber.transcribe.return_value = (api_response, "test_id_123")
 
             import os
             old_cwd = os.getcwd()
@@ -99,10 +98,10 @@ class TestCLI:
             finally:
                 os.chdir(old_cwd)
 
-            output_file = tmp_path / "outputs" / "text" / "douyin_test_id_123.txt"
+            output_file = tmp_path / "outputs" / "json" / "douyin_test_id_123.json"
             assert output_file.exists()
 
-    def test_main_plain_text_no_timestamps(self, tmp_path):
+    def test_main_json_output_format(self, tmp_path):
         with patch("douyin_transcriber.cli.AudioExtractor") as mock_extractor_cls, \
              patch("douyin_transcriber.cli.Transcriber") as mock_transcriber_cls, \
              patch("douyin_transcriber.cli.sys.argv", ["douyin-transcriber", "https://v.douyin.com/test/"]):
@@ -117,13 +116,15 @@ class TestCLI:
             mock_transcriber = MagicMock()
             mock_transcriber_cls.return_value = mock_transcriber
 
-            result = TranscriptionResult(
-                segments=[
-                    TranscriptionSegment(text="有时间戳的文字", start=10.0, end=15.0),
-                ],
-                video_id="vid"
-            )
-            mock_transcriber.transcribe.return_value = result
+            api_response = {
+                "text": "有时间戳的文字",
+                "duration": 15.0,
+                "n_speakers": 1,
+                "segments": [
+                    {"text": "有时间戳的文字", "start": 10.0, "end": 15.0, "speaker": "S1"},
+                ]
+            }
+            mock_transcriber.transcribe.return_value = (api_response, "vid")
 
             import os
             old_cwd = os.getcwd()
@@ -133,10 +134,12 @@ class TestCLI:
             finally:
                 os.chdir(old_cwd)
 
-            output_file = tmp_path / "outputs" / "text" / "douyin_vid.txt"
-            content = output_file.read_text(encoding="utf-8")
-            assert "有时间戳的文字" in content
-            assert "[" not in content
+            output_file = tmp_path / "outputs" / "json" / "douyin_vid.json"
+            content = json.loads(output_file.read_text(encoding="utf-8"))
+            assert content["text"] == "有时间戳的文字"
+            assert content["duration"] == 15.0
+            assert content["segments"][0]["start"] == 10.0
+            assert content["segments"][0]["speaker"] == "S1"
 
     def test_main_missing_api_key(self, tmp_path, capsys):
         with patch("douyin_transcriber.cli.AudioExtractor") as mock_extractor_cls, \
@@ -198,11 +201,8 @@ class TestCLI:
             mock_transcriber = MagicMock()
             mock_transcriber_cls.return_value = mock_transcriber
 
-            result = TranscriptionResult(
-                segments=[TranscriptionSegment(text="测试内容")],
-                video_id="prog_test"
-            )
-            mock_transcriber.transcribe.return_value = result
+            api_response = {"text": "测试内容", "segments": []}
+            mock_transcriber.transcribe.return_value = (api_response, "prog_test")
 
             import os
             old_cwd = os.getcwd()
@@ -218,47 +218,8 @@ class TestCLI:
             assert "已保存" in captured.err
             assert captured.out == ""
 
-    def test_main_timestamps_flag(self, tmp_path):
-        with patch("douyin_transcriber.cli.AudioExtractor") as mock_extractor_cls, \
-             patch("douyin_transcriber.cli.Transcriber") as mock_transcriber_cls, \
-             patch("douyin_transcriber.cli.sys.argv", [
-                 "douyin-transcriber", "--timestamps", "https://v.douyin.com/test/"
-             ]):
-
-            mock_extractor = MagicMock()
-            mock_extractor_cls.return_value = mock_extractor
-
-            audio_path = tmp_path / "douyin_ts_test.mp3"
-            audio_path.write_bytes(b"fake")
-            mock_extractor.extract.return_value = audio_path
-
-            mock_transcriber = MagicMock()
-            mock_transcriber_cls.return_value = mock_transcriber
-
-            result = TranscriptionResult(
-                segments=[
-                    TranscriptionSegment(text="大家好", start=0.0, end=2.5),
-                    TranscriptionSegment(text="今天聊一下", start=3.0, end=8.5),
-                ],
-                video_id="ts_test"
-            )
-            mock_transcriber.transcribe.return_value = result
-
-            import os
-            old_cwd = os.getcwd()
-            try:
-                os.chdir(tmp_path)
-                main()
-            finally:
-                os.chdir(old_cwd)
-
-            output_file = tmp_path / "outputs" / "text" / "douyin_ts_test.txt"
-            content = output_file.read_text(encoding="utf-8")
-            assert "[00:00] 大家好" in content
-            assert "[00:03] 今天聊一下" in content
-
     def test_main_custom_output_path(self, tmp_path):
-        custom_path = tmp_path / "my_custom_output.txt"
+        custom_path = tmp_path / "my_custom_output.json"
 
         with patch("douyin_transcriber.cli.AudioExtractor") as mock_extractor_cls, \
              patch("douyin_transcriber.cli.Transcriber") as mock_transcriber_cls, \
@@ -276,20 +237,17 @@ class TestCLI:
             mock_transcriber = MagicMock()
             mock_transcriber_cls.return_value = mock_transcriber
 
-            result = TranscriptionResult(
-                segments=[TranscriptionSegment(text="自定义路径测试")],
-                video_id="custom_test"
-            )
-            mock_transcriber.transcribe.return_value = result
+            api_response = {"text": "自定义路径测试", "segments": []}
+            mock_transcriber.transcribe.return_value = (api_response, "custom_test")
 
             main()
 
             assert custom_path.exists()
-            content = custom_path.read_text(encoding="utf-8")
-            assert "自定义路径测试" in content
+            content = json.loads(custom_path.read_text(encoding="utf-8"))
+            assert content["text"] == "自定义路径测试"
 
     def test_main_output_file_exists_error(self, tmp_path, capsys):
-        existing_file = tmp_path / "existing.txt"
+        existing_file = tmp_path / "existing.json"
         existing_file.write_text("already exists", encoding="utf-8")
 
         with patch("douyin_transcriber.cli.AudioExtractor") as mock_extractor_cls, \
@@ -308,11 +266,8 @@ class TestCLI:
             mock_transcriber = MagicMock()
             mock_transcriber_cls.return_value = mock_transcriber
 
-            result = TranscriptionResult(
-                segments=[TranscriptionSegment(text="测试")],
-                video_id="exist_test"
-            )
-            mock_transcriber.transcribe.return_value = result
+            api_response = {"text": "测试", "segments": []}
+            mock_transcriber.transcribe.return_value = (api_response, "exist_test")
 
             with pytest.raises(SystemExit) as exc_info:
                 main()

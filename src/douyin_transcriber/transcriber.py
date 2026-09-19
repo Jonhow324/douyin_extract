@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 
@@ -13,7 +14,7 @@ class MissingAPIKeyError(Exception):
 class Transcriber:
     API_URL = "https://api.minimax.cn/v1/speech_to_text"
 
-    def transcribe(self, audio_path: Path) -> TranscriptionResult:
+    def transcribe(self, audio_path: Path) -> tuple[dict, str]:
         api_key = os.environ.get("MINIMAX_API_KEY")
         if not api_key:
             raise MissingAPIKeyError("请设置环境变量 MINIMAX_API_KEY")
@@ -38,19 +39,4 @@ class Transcriber:
 
             data = response.json()
             video_id = audio_path.stem.removeprefix("douyin_")
-            return self._parse_response(data, video_id)
-
-    def _parse_response(self, data: dict, video_id: str = "") -> TranscriptionResult:
-        if "segments" in data and data["segments"]:
-            segments = [
-                TranscriptionSegment(
-                    text=seg["text"],
-                    start=seg.get("start"),
-                    end=seg.get("end"),
-                )
-                for seg in data["segments"]
-            ]
-        else:
-            segments = [TranscriptionSegment(text=data.get("text", ""))]
-
-        return TranscriptionResult(segments=segments, video_id=video_id)
+            return data, video_id
