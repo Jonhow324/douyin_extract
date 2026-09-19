@@ -147,14 +147,14 @@ class TestCLI:
 
             mock_extractor = MagicMock()
             mock_extractor_cls.return_value = mock_extractor
-            mock_extractor.extract.side_effect = MissingAPIKeyError("请设置环境变量 MINIMAX_API_KEY")
+            mock_extractor.extract.side_effect = MissingAPIKeyError("请设置环境变量 MINIMAX_ASR_KEY")
 
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 1
 
             captured = capsys.readouterr()
-            assert "MINIMAX_API_KEY" in captured.err
+            assert "MINIMAX_ASR_KEY" in captured.err
 
     def test_main_invalid_url(self, tmp_path, capsys):
         with patch("douyin_transcriber.cli.AudioExtractor") as mock_extractor_cls, \

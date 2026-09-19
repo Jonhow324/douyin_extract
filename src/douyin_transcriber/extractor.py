@@ -1,6 +1,6 @@
 import shutil
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 
 import yt_dlp
 
@@ -19,6 +19,7 @@ class AudioExtractor:
 
     def extract(self, url: str, cookies_path: Path | None = None, cookies_from_browser: str | None = None) -> Path:
         self._validate_url(url)
+        url = self._normalize_url(url)
 
         output_dir = Path("outputs/audio")
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -56,6 +57,16 @@ class AudioExtractor:
         parsed = urlparse(url)
         if parsed.hostname not in self.DOUYIN_DOMAINS:
             raise InvalidURLError("仅支持抖音链接")
+
+    def _normalize_url(self, url: str) -> str:
+        parsed = urlparse(url)
+        query_params = parse_qs(parsed.query)
+        
+        if "modal_id" in query_params:
+            video_id = query_params["modal_id"][0]
+            return f"https://www.douyin.com/video/{video_id}"
+        
+        return url
 
     def _find_ffmpeg(self) -> Path | None:
         if shutil.which("ffmpeg"):

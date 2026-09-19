@@ -69,7 +69,7 @@ def main():
             audio_path.unlink()
             print(f"已清理音频文件: {audio_path}", file=sys.stderr)
     except MissingAPIKeyError:
-        print("请设置环境变量 MINIMAX_API_KEY", file=sys.stderr)
+        print("请设置环境变量 MINIMAX_ASR_KEY", file=sys.stderr)
         sys.exit(1)
     except InvalidURLError:
         print("仅支持抖音链接", file=sys.stderr)
