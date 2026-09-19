@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "douyin-transcriber"
+version = "0.1.0"
+description = "从抖音链接提取语音转录的 CLI 工具"
+requires-python = ">=3.10"
+dependencies = [
+    "yt-dlp>=2024.1.0",
+    "httpx>=0.27.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[project.scripts]
+douyin-transcriber = "douyin_transcriber.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
