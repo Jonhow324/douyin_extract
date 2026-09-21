@@ -1,4 +1,4 @@
-from douyin_transcriber import TranscriptionResult
+from video_audio_transcriber import TranscriptionResult
 
 
 class OutputFormatter:

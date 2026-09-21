@@ -5,23 +5,23 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from douyin_transcriber.extractor import AudioExtractor, InvalidURLError
-from douyin_transcriber.transcriber import MissingAPIKeyError, Transcriber
+from video_audio_transcriber.extractor import AudioExtractor, InvalidURLError
+from video_audio_transcriber.transcriber import MissingAPIKeyError, Transcriber
 
 
 def main():
     load_dotenv()
 
     parser = argparse.ArgumentParser(
-        description="从抖音链接提取语音转录"
+        description="从视频链接提取语音转录（支持抖音、B站）"
     )
     parser.add_argument(
         "url",
-        help="抖音分享链接"
+        help="视频链接（支持抖音、B站）"
     )
     parser.add_argument(
         "-o", "--output",
-        help="指定输出文件路径（默认: douyin_<video_id>.json）"
+        help="指定输出文件路径（默认: <video_id>.json）"
     )
     parser.add_argument(
         "--cookies",
@@ -55,7 +55,7 @@ def main():
         else:
             output_dir = Path("outputs/json")
             output_dir.mkdir(parents=True, exist_ok=True)
-            output_file = output_dir / f"douyin_{video_id}.json"
+            output_file = output_dir / f"{video_id}.json"
 
         if output_file.exists():
             print(f"文件已存在: {output_file}", file=sys.stderr)
@@ -71,8 +71,8 @@ def main():
     except MissingAPIKeyError:
         print("请设置环境变量 MINIMAX_ASR_KEY", file=sys.stderr)
         sys.exit(1)
-    except InvalidURLError:
-        print("仅支持抖音链接", file=sys.stderr)
+    except InvalidURLError as e:
+        print(str(e), file=sys.stderr)
         sys.exit(1)
     except Exception:
         print("视频不可用", file=sys.stderr)

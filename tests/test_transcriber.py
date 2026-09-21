@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from douyin_transcriber.transcriber import MissingAPIKeyError, Transcriber
+from video_audio_transcriber.transcriber import MissingAPIKeyError, Transcriber
 
 
 class TestTranscriber:
@@ -21,8 +21,8 @@ class TestTranscriber:
 
     def test_transcribe_success_with_segments(self, tmp_path):
         with patch.dict(os.environ, {"MINIMAX_ASR_KEY": "test_key_123"}):
-            with patch("douyin_transcriber.transcriber.Transcriber._get_audio_duration", return_value=10.0):
-                with patch("douyin_transcriber.transcriber.httpx.Client") as mock_client:
+            with patch("video_audio_transcriber.transcriber.Transcriber._get_audio_duration", return_value=10.0):
+                with patch("video_audio_transcriber.transcriber.httpx.Client") as mock_client:
                     mock_response = MagicMock()
                     mock_response.status_code = 200
                     mock_response.json.return_value = {
@@ -45,7 +45,7 @@ class TestTranscriber:
 
                     data, video_id = transcriber.transcribe(audio_path)
 
-                    assert video_id == "test"
+                    assert video_id == "douyin_test"
                     assert data["text"] == "大家好今天聊一下"
                     assert data["duration"] == 10.5
                     assert len(data["segments"]) == 2
@@ -57,8 +57,8 @@ class TestTranscriber:
 
     def test_transcribe_success_without_segments(self, tmp_path):
         with patch.dict(os.environ, {"MINIMAX_ASR_KEY": "test_key"}):
-            with patch("douyin_transcriber.transcriber.Transcriber._get_audio_duration", return_value=10.0):
-                with patch("douyin_transcriber.transcriber.httpx.Client") as mock_client:
+            with patch("video_audio_transcriber.transcriber.Transcriber._get_audio_duration", return_value=10.0):
+                with patch("video_audio_transcriber.transcriber.httpx.Client") as mock_client:
                     mock_response = MagicMock()
                     mock_response.status_code = 200
                     mock_response.json.return_value = {
@@ -76,13 +76,13 @@ class TestTranscriber:
 
                     data, video_id = transcriber.transcribe(audio_path)
 
-                    assert video_id == "test"
+                    assert video_id == "douyin_test"
                     assert data["text"] == "完整的转录文本"
 
     def test_transcribe_api_error_response(self, tmp_path):
         with patch.dict(os.environ, {"MINIMAX_ASR_KEY": "test_key"}):
-            with patch("douyin_transcriber.transcriber.Transcriber._get_audio_duration", return_value=10.0):
-                with patch("douyin_transcriber.transcriber.httpx.Client") as mock_client:
+            with patch("video_audio_transcriber.transcriber.Transcriber._get_audio_duration", return_value=10.0):
+                with patch("video_audio_transcriber.transcriber.httpx.Client") as mock_client:
                     mock_response = MagicMock()
                     mock_response.status_code = 400
                     mock_response.text = "Invalid audio format"
@@ -101,8 +101,8 @@ class TestTranscriber:
 
     def test_transcribe_request_format(self, tmp_path):
         with patch.dict(os.environ, {"MINIMAX_ASR_KEY": "test_key_456"}):
-            with patch("douyin_transcriber.transcriber.Transcriber._get_audio_duration", return_value=10.0):
-                with patch("douyin_transcriber.transcriber.httpx.Client") as mock_client:
+            with patch("video_audio_transcriber.transcriber.Transcriber._get_audio_duration", return_value=10.0):
+                with patch("video_audio_transcriber.transcriber.httpx.Client") as mock_client:
                     mock_response = MagicMock()
                     mock_response.status_code = 200
                     mock_response.json.return_value = {"text": "test"}

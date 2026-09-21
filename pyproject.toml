@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "douyin-transcriber"
+name = "video-audio-transcriber"
 version = "0.1.0"
-description = "从抖音链接提取语音转录的 CLI 工具"
+description = "从视频链接提取音频转录的 CLI 工具（支持抖音、B站）"
 requires-python = ">=3.10"
 dependencies = [
     "yt-dlp>=2024.1.0",
@@ -19,7 +19,7 @@ dev = [
 ]
 
 [project.scripts]
-douyin-transcriber = "douyin_transcriber.cli:main"
+video-audio-transcriber = "video_audio_transcriber.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

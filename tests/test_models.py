@@ -1,4 +1,4 @@
-from douyin_transcriber import TranscriptionResult, TranscriptionSegment
+from video_audio_transcriber import TranscriptionResult, TranscriptionSegment
 
 
 def test_dataclass_imports():

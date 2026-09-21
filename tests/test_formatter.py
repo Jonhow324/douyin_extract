@@ -1,6 +1,6 @@
 import pytest
-from douyin_transcriber import TranscriptionResult, TranscriptionSegment
-from douyin_transcriber.formatter import OutputFormatter
+from video_audio_transcriber import TranscriptionResult, TranscriptionSegment
+from video_audio_transcriber.formatter import OutputFormatter
 
 
 class TestOutputFormatter:

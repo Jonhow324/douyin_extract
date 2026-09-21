@@ -7,7 +7,7 @@ from pathlib import Path
 
 import httpx
 
-from douyin_transcriber import TranscriptionResult, TranscriptionSegment
+from video_audio_transcriber import TranscriptionResult, TranscriptionSegment
 
 
 class MissingAPIKeyError(Exception):
@@ -79,7 +79,7 @@ class Transcriber:
                 raise Exception(f"ASR API 请求失败: {response.status_code} {response.text}")
 
             data = response.json()
-            video_id = audio_path.stem.removeprefix("douyin_")
+            video_id = audio_path.stem
             return data, video_id
 
     def _transcribe_long_audio(self, audio_path: Path, api_key: str) -> tuple[dict, str]:
@@ -109,7 +109,7 @@ class Transcriber:
                 "segments": all_segments,
             }
             
-            video_id = audio_path.stem.removeprefix("douyin_")
+            video_id = audio_path.stem
             return merged_data, video_id
 
     def _split_audio(self, audio_path: Path, output_dir: Path) -> list[Path]:
