@@ -24,7 +24,7 @@ class Transcriber:
         / "ffmpeg-9.0.1-full_build" / "bin",
     ]
 
-    def transcribe(self, audio_path: Path) -> tuple[dict, str]:
+    def transcribe(self, audio_path: Path, source_url: str = "") -> tuple[dict, str]:
         api_key = os.environ.get("MINIMAX_ASR_KEY")
         if not api_key:
             raise MissingAPIKeyError("请设置环境变量 MINIMAX_ASR_KEY")
@@ -33,9 +33,9 @@ class Transcriber:
         file_size_mb = audio_path.stat().st_size / (1024 * 1024)
 
         if duration > self.MAX_DURATION_SECONDS or file_size_mb > self.MAX_FILE_SIZE_MB:
-            return self._transcribe_long_audio(audio_path, api_key)
+            return self._transcribe_long_audio(audio_path, api_key, source_url)
         else:
-            return self._transcribe_single(audio_path, api_key)
+            return self._transcribe_single(audio_path, api_key, source_url)
 
     def _find_ffmpeg_dir(self) -> Path | None:
         if shutil.which("ffmpeg"):
@@ -59,7 +59,7 @@ class Transcriber:
         )
         return float(result.stdout.strip())
 
-    def _transcribe_single(self, audio_path: Path, api_key: str) -> tuple[dict, str]:
+    def _transcribe_single(self, audio_path: Path, api_key: str, source_url: str = "") -> tuple[dict, str]:
         with httpx.Client(timeout=120, trust_env=False) as client:
             with open(audio_path, "rb") as audio_file:
                 response = client.post(
@@ -79,10 +79,11 @@ class Transcriber:
                 raise Exception(f"ASR API 请求失败: {response.status_code} {response.text}")
 
             data = response.json()
+            data["source_url"] = source_url
             video_id = audio_path.stem
             return data, video_id
 
-    def _transcribe_long_audio(self, audio_path: Path, api_key: str) -> tuple[dict, str]:
+    def _transcribe_long_audio(self, audio_path: Path, api_key: str, source_url: str = "") -> tuple[dict, str]:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_dir = Path(temp_dir)
             chunks = self._split_audio(audio_path, temp_dir)
@@ -91,7 +92,7 @@ class Transcriber:
             total_duration = 0.0
             
             for i, chunk_path in enumerate(chunks):
-                chunk_data, _ = self._transcribe_single(chunk_path, api_key)
+                chunk_data, _ = self._transcribe_single(chunk_path, api_key, source_url)
                 
                 if "segments" in chunk_data:
                     for seg in chunk_data["segments"]:
@@ -107,6 +108,7 @@ class Transcriber:
                 "duration": total_duration,
                 "n_speakers": 1,
                 "segments": all_segments,
+                "source_url": source_url,
             }
             
             video_id = audio_path.stem

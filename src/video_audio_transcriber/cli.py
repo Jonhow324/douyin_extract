@@ -48,7 +48,7 @@ def main():
         )
 
         print("正在转录…", file=sys.stderr)
-        data, video_id = transcriber.transcribe(audio_path)
+        data, video_id = transcriber.transcribe(audio_path, source_url=args.url)
 
         if args.output:
             output_file = Path(args.output)
