@@ -7,7 +7,7 @@
 
 ## 1. 问题陈述
 
-当前工具仅支持 MiniMax ASR 作为语音识别引擎。用户希望增加阿里云 `qwen3-asr-flash` 作为备选引擎，以便在 MiniMax 不可用或效果不佳时有替代方案。
+当前工具仅支持 MiniMax ASR 作为语音识别引擎。用户希望增加阿里云 `qwen-audio-3.0-asr-flash` 作为备选引擎，以便在 MiniMax 不可用或效果不佳时有替代方案。
 
 两个引擎需要在同一工具中共存，用户通过 CLI 参数选择。
 
@@ -41,7 +41,7 @@ cli.py → --provider aliyun|minimax（默认 minimax）
 **作为**用户，**我想**执行 `video-audio-transcriber <url> --provider aliyun`，**以便**使用阿里云 ASR 进行转录。
 
 验收标准：
-- `--provider aliyun` 使用 `AliyunTranscriber` 调用 `qwen3-asr-flash` 模型
+- `--provider aliyun` 使用 `AliyunTranscriber` 调用 `qwen-audio-3.0-asr-flash` 模型
 - 请求发送到 DashScope API（`https://dashscope.aliyuncs.com/api/v1/services/multimodal-generation`）
 - 使用环境变量 `DASHSCOPE_API_KEY` 认证
 
@@ -96,7 +96,7 @@ cli.py → --provider aliyun|minimax（默认 minimax）
 
 | 决策 | 理由 |
 |------|------|
-| 阿里云模型用 `qwen3-asr-flash` | 短音频同步，和 MiniMax 对等，架构改动最小 |
+| 阿里云模型用 `qwen-audio-3.0-asr-flash` | 短音频同步，按音频秒数计费（36000秒免费），和 MiniMax 对等 |
 | CLI `--provider aliyun\|minimax` 选择 | 显式、简单、默认 minimax 保持向后兼容 |
 | Transcriber Protocol 抽象 | 复用 extractor 已验证的 Protocol 模式，未来加引擎容易 |
 | 长音频分段抽为共享包装层 | 两个引擎都有 5min 限制，分段逻辑写一次 |
@@ -131,7 +131,7 @@ cli.py → --provider aliyun|minimax（默认 minimax）
 
 - Endpoint: `POST https://dashscope.aliyuncs.com/api/v1/services/multimodal-generation`
 - 认证: `Authorization: Bearer <DASHSCOPE_API_KEY>`
-- 模型: `qwen3-asr-flash`
+- 模型: `qwen-audio-3.0-asr-flash`
 - 音频输入: 支持公网 URL / Base64（短音频场景用 Base64 更简单，无需文件托管）
 - 响应: DashScope 原生格式，需解析 `output.choices[0].message.content` 提取文本和时间戳
 

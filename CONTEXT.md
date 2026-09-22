@@ -22,4 +22,4 @@
 | yt-dlp | 从视频链接提取音频（多平台） |
 | ffmpeg | yt-dlp 的音频转码后端 |
 | MiniMax ASR API | 语音识别引擎（短音频同步） |
-| 阿里云 DashScope ASR API | 语音识别引擎（qwen3-asr-flash，短音频同步） |
+| 阿里云 DashScope ASR API | 语音识别引擎（qwen-audio-3.0-asr-flash，短音频同步） |

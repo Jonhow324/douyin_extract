@@ -1,6 +1,6 @@
 # 视频音频转录工具
 
-从视频链接提取音频，通过 MiniMax ASR API 转录为文本，支持长视频自动分割处理。
+从视频链接提取音频，通过 ASR API 转录为文本。支持 MiniMax 和阿里云双引擎，长视频自动分割处理。
 
 ## 支持平台
 
@@ -10,9 +10,10 @@
 ## 功能特性
 
 - 多平台支持（抖音、B站）
+- 双 ASR 引擎（MiniMax / 阿里云，通过 `--provider` 切换）
 - 自动识别平台并提取音频
 - 长视频自动分割（超过 8 分钟的视频自动分段处理）
-- 输出完整 JSON 格式（包含说话人标识、时间戳等）
+- 输出完整 JSON 格式（包含时间戳分段）
 - 自动清理中间文件（音频文件转录后自动删除）
 - 支持 cookies 访问需要登录的视频
 
@@ -47,10 +48,16 @@ winget install Gyan.FFmpeg
 创建 `.env` 文件（或复制 `.env.example`）：
 
 ```bash
+# MiniMax（默认引擎）
 MINIMAX_ASR_KEY=your_api_key_here
+
+# 阿里云（可选，--provider aliyun 时使用）
+DASHSCOPE_API_KEY=your_api_key_here
 ```
 
-获取 API Key：[MiniMax 开放平台](https://platform.minimax.cn/)
+获取 API Key：
+- [MiniMax 开放平台](https://platform.minimax.cn/)
+- [阿里云百炼平台](https://bailian.console.aliyun.com/)
 
 ### 2. 获取 Cookies（可选）
 
@@ -90,11 +97,14 @@ video-audio-transcribe <url> --cookies-from-browser firefox
 ### 基本用法
 
 ```bash
-# 抖音视频
+# 抖音视频（默认使用 MiniMax）
 video-audio-transcribe "https://www.douyin.com/video/xxxxxxxxx"
 
 # B站视频
 video-audio-transcribe "https://www.bilibili.com/video/BVxxxxxxxxx"
+
+# 使用阿里云引擎
+video-audio-transcribe <url> --provider aliyun
 ```
 
 ### 带 Cookies 访问
@@ -147,17 +157,15 @@ https://m.bilibili.com/video/BV1xx411c7mD
 {
   "text": "完整的转录文本",
   "duration": 2145.8,
-  "n_speakers": 2,
   "segments": [
     {
-      "id": 0,
+      "text": "这段话的内容",
       "start": 0.04,
       "end": 12.28,
-      "speaker": "S1",
-      "text": "这段话的内容"
+      "speaker": ""
     }
   ],
-  "trace_id": "api-request-trace-id"
+  "source_url": "https://www.bilibili.com/video/BVxxxxxxxxx"
 }
 ```
 
@@ -172,10 +180,11 @@ https://m.bilibili.com/video/BV1xx411c7mD
 video-audio-transcriber/
 ├── src/
 │   └── video_audio_transcriber/
-│       ├── cli.py          # 命令行入口
-│       ├── extractor.py    # 音频提取（多平台）
-│       ├── transcriber.py  # 语音转录
-│       └── formatter.py    # 文本格式化
+│       ├── cli.py              # 命令行入口
+│       ├── extractor.py        # 音频提取（多平台）
+│       ├── transcriber.py      # MiniMax 转录 + 长音频包装层
+│       ├── aliyun_transcriber.py  # 阿里云转录
+│       └── formatter.py        # 文本格式化
 ├── outputs/
 │   ├── audio/              # 临时音频文件（自动清理）
 │   └── json/               # 转录结果
@@ -199,7 +208,13 @@ pytest --cov=video_audio_transcriber
 
 ## 定价说明
 
-MiniMax ASR API 定价约为 2.5 元/小时（实际以官方为准）。
+### MiniMax ASR
+约 2.5 元/小时（实际以官方为准）。
+
+### 阿里云 ASR（qwen-audio-3.0-asr-flash）
+- 按音频秒数计费，免费额度 36,000 秒（10 小时）
+- 超出后按输入音频秒数计费，输出不计费
+- 大文件（>3.5MB）自动压缩后发送，不影响转录质量
 
 长视频会自动分割为多个片段处理，总费用按实际音频时长计算。
 

@@ -1,4 +1,3 @@
-import base64
 import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -7,6 +6,42 @@ import pytest
 
 from video_audio_transcriber.aliyun_transcriber import AliyunTranscriber
 from video_audio_transcriber.transcriber import MissingAPIKeyError
+
+
+def _mock_response(output_json: dict) -> MagicMock:
+    mock = MagicMock()
+    mock.status_code = 200
+    mock.json.return_value = output_json
+    return mock
+
+
+def _mock_client(mock_response: MagicMock) -> MagicMock:
+    mock_instance = MagicMock()
+    mock_instance.post.return_value = mock_response
+    mock_instance.__enter__.return_value = mock_instance
+    return mock_instance
+
+
+WORDS_RESPONSE = {
+    "output": {
+        "text": "大家好。今天聊一下。",
+        "sentence": {
+            "sentence_id": 1,
+            "begin_time": 0,
+            "end_time": 8500,
+            "text": "大家好。今天聊一下。",
+            "sentence_end": True,
+            "words": [
+                {"begin_time": 0, "end_time": 500, "text": "大家", "punctuation": "", "fixed": True, "speaker_id": None},
+                {"begin_time": 500, "end_time": 1000, "text": "好", "punctuation": "。", "fixed": True, "speaker_id": None},
+                {"begin_time": 3000, "end_time": 4000, "text": "今天", "punctuation": "", "fixed": True, "speaker_id": None},
+                {"begin_time": 4000, "end_time": 5000, "text": "聊", "punctuation": "", "fixed": True, "speaker_id": None},
+                {"begin_time": 5000, "end_time": 6000, "text": "一下", "punctuation": "。", "fixed": True, "speaker_id": None},
+            ],
+        },
+        "request_id": "test-request-id",
+    },
+}
 
 
 class TestAliyunTranscriber:
@@ -25,27 +60,7 @@ class TestAliyunTranscriber:
         with patch.dict(os.environ, {"DASHSCOPE_API_KEY": "test_dashscope_key"}):
             with patch("video_audio_transcriber.aliyun_transcriber._get_audio_duration", return_value=10.0):
                 with patch("video_audio_transcriber.aliyun_transcriber.httpx.Client") as mock_client:
-                    mock_response = MagicMock()
-                    mock_response.status_code = 200
-                    mock_response.json.return_value = {
-                        "output": {
-                            "choices": [{
-                                "message": {
-                                    "role": "assistant",
-                                    "content": [
-                                        {"text": "大家好"},
-                                        {"text": "今天聊一下", "start_time": 3000, "end_time": 8500}
-                                    ]
-                                }
-                            }]
-                        },
-                        "usage": {"duration": 10}
-                    }
-
-                    mock_instance = MagicMock()
-                    mock_instance.post.return_value = mock_response
-                    mock_instance.__enter__.return_value = mock_instance
-                    mock_client.return_value = mock_instance
+                    mock_client.return_value = _mock_client(_mock_response(WORDS_RESPONSE))
 
                     transcriber = AliyunTranscriber()
                     audio_path = tmp_path / "douyin_test.mp3"
@@ -54,30 +69,28 @@ class TestAliyunTranscriber:
                     data, video_id = transcriber.transcribe(audio_path)
 
                     assert video_id == "douyin_test"
-                    assert data["text"] == "大家好今天聊一下"
+                    assert data["text"] == "大家好。今天聊一下。"
                     assert data["duration"] == 10.0
                     assert len(data["segments"]) == 2
-                    assert data["segments"][0]["text"] == "大家好"
-                    assert data["segments"][0]["start"] == 0.0
-                    assert data["segments"][0]["speaker"] == ""
-                    assert data["segments"][1]["text"] == "今天聊一下"
-                    assert data["segments"][1]["start"] == 3.0
-                    assert data["segments"][1]["end"] == 8.5
 
-                    mock_instance.post.assert_called_once()
+                    assert data["segments"][0]["text"] == "大家好。"
+                    assert data["segments"][0]["start"] == 0.0
+                    assert data["segments"][0]["end"] == 1.0
+                    assert data["segments"][0]["speaker"] == ""
+
+                    assert data["segments"][1]["text"] == "今天聊一下。"
+                    assert data["segments"][1]["start"] == 3.0
+                    assert data["segments"][1]["end"] == 6.0
 
     def test_transcribe_api_error_response(self, tmp_path):
         with patch.dict(os.environ, {"DASHSCOPE_API_KEY": "test_key"}):
             with patch("video_audio_transcriber.aliyun_transcriber._get_audio_duration", return_value=10.0):
                 with patch("video_audio_transcriber.aliyun_transcriber.httpx.Client") as mock_client:
-                    mock_response = MagicMock()
-                    mock_response.status_code = 400
-                    mock_response.text = "Invalid audio format"
+                    mock_resp = MagicMock()
+                    mock_resp.status_code = 400
+                    mock_resp.text = "Invalid audio format"
 
-                    mock_instance = MagicMock()
-                    mock_instance.post.return_value = mock_response
-                    mock_instance.__enter__.return_value = mock_instance
-                    mock_client.return_value = mock_instance
+                    mock_client.return_value = _mock_client(mock_resp)
 
                     transcriber = AliyunTranscriber()
                     audio_path = tmp_path / "test.mp3"
@@ -90,23 +103,18 @@ class TestAliyunTranscriber:
         with patch.dict(os.environ, {"DASHSCOPE_API_KEY": "test_key_456"}):
             with patch("video_audio_transcriber.aliyun_transcriber._get_audio_duration", return_value=10.0):
                 with patch("video_audio_transcriber.aliyun_transcriber.httpx.Client") as mock_client:
-                    mock_response = MagicMock()
-                    mock_response.status_code = 200
-                    mock_response.json.return_value = {
+                    simple_response = {
                         "output": {
-                            "choices": [{
-                                "message": {
-                                    "content": [{"text": "test"}]
-                                }
-                            }]
+                            "text": "测试文本",
+                            "sentence": {
+                                "words": [
+                                    {"begin_time": 0, "end_time": 2000, "text": "测试", "punctuation": ""},
+                                    {"begin_time": 2000, "end_time": 4000, "text": "文本", "punctuation": "。"},
+                                ],
+                            },
                         },
-                        "usage": {"duration": 10}
                     }
-
-                    mock_instance = MagicMock()
-                    mock_instance.post.return_value = mock_response
-                    mock_instance.__enter__.return_value = mock_instance
-                    mock_client.return_value = mock_instance
+                    mock_client.return_value = _mock_client(_mock_response(simple_response))
 
                     transcriber = AliyunTranscriber()
                     audio_path = tmp_path / "douyin_audio.mp3"
@@ -114,19 +122,66 @@ class TestAliyunTranscriber:
 
                     transcriber.transcribe(audio_path)
 
-                    call_args = mock_instance.post.call_args
-                    assert call_args.args[0] == "https://dashscope.aliyuncs.com/api/v1/services/multimodal-generation"
-                    assert "Authorization" in call_args.kwargs.get("headers", {})
-                    assert "Bearer test_key_456" in call_args.kwargs["headers"]["Authorization"]
+                    call_args = mock_client.return_value.post.call_args
+                    url = call_args.args[0]
+                    assert "aigc/multimodal-generation/generation" in url
+                    assert "/compatible-mode/" not in url
+
+                    headers = call_args.kwargs.get("headers", {})
+                    assert "Bearer test_key_456" in headers["Authorization"]
+                    assert headers.get("X-DashScope-SSE") == "disable"
 
                     json_body = call_args.kwargs["json"]
-                    assert json_body["model"] == "qwen3-asr-flash"
-                    assert "input" in json_body
-                    assert "messages" in json_body["input"]
-                    assert json_body["input"]["messages"][0]["role"] == "user"
+                    assert json_body["model"] == "qwen-audio-3.0-asr-flash"
+                    assert json_body["parameters"]["format"] == "mp3"
 
                     content = json_body["input"]["messages"][0]["content"]
-                    assert len(content) == 1
-                    assert "audio" in content[0]
-                    audio_data = content[0]["audio"]
-                    assert audio_data.startswith("data:audio/mpeg;base64,")
+                    assert content[0]["audio"].startswith("data:audio/mpeg;base64,")
+
+    def test_url_strips_compatible_mode_suffix(self, tmp_path):
+        env = {
+            "DASHSCOPE_API_KEY": "test_key",
+            "DASHSCOPE_BASE_URL": "https://llm-xxx.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+        }
+        with patch.dict(os.environ, env):
+            with patch("video_audio_transcriber.aliyun_transcriber._get_audio_duration", return_value=10.0):
+                with patch("video_audio_transcriber.aliyun_transcriber.httpx.Client") as mock_client:
+                    mock_client.return_value = _mock_client(_mock_response(WORDS_RESPONSE))
+
+                    transcriber = AliyunTranscriber()
+                    audio_path = tmp_path / "test.mp3"
+                    audio_path.write_bytes(b"fake audio")
+
+                    transcriber.transcribe(audio_path)
+
+                    url = mock_client.return_value.post.call_args.args[0]
+                    assert url == "https://llm-xxx.cn-beijing.maas.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation"
+
+    def test_words_without_punctuation_form_single_segment(self, tmp_path):
+        response = {
+            "output": {
+                "text": "没有标点的文本",
+                "sentence": {
+                    "words": [
+                        {"begin_time": 0, "end_time": 500, "text": "没有", "punctuation": ""},
+                        {"begin_time": 500, "end_time": 1000, "text": "标点", "punctuation": ""},
+                        {"begin_time": 1000, "end_time": 1500, "text": "的文本", "punctuation": ""},
+                    ],
+                },
+            },
+        }
+        with patch.dict(os.environ, {"DASHSCOPE_API_KEY": "test_key"}):
+            with patch("video_audio_transcriber.aliyun_transcriber._get_audio_duration", return_value=5.0):
+                with patch("video_audio_transcriber.aliyun_transcriber.httpx.Client") as mock_client:
+                    mock_client.return_value = _mock_client(_mock_response(response))
+
+                    transcriber = AliyunTranscriber()
+                    audio_path = tmp_path / "test.mp3"
+                    audio_path.write_bytes(b"fake")
+
+                    data, _ = transcriber.transcribe(audio_path)
+
+                    assert len(data["segments"]) == 1
+                    assert data["segments"][0]["text"] == "没有标点的文本"
+                    assert data["segments"][0]["start"] == 0.0
+                    assert data["segments"][0]["end"] == 1.5
