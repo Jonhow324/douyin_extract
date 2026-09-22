@@ -37,6 +37,7 @@ class AliyunTranscriber:
     DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com"
     MODEL = "qwen-audio-3.0-asr-flash"
     MAX_RAW_SIZE = 3_500_000
+    MAX_AUDIO_DURATION = 290
 
     def transcribe(self, audio_path: Path, source_url: str = "") -> tuple[dict, str]:
         api_key = os.environ.get("DASHSCOPE_API_KEY")

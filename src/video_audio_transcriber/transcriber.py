@@ -149,7 +149,7 @@ class LongAudioWrapper:
 def get_transcriber(provider: str) -> LongAudioWrapper:
     if provider == "aliyun":
         from video_audio_transcriber.aliyun_transcriber import AliyunTranscriber
-        return LongAudioWrapper(AliyunTranscriber())
+        return LongAudioWrapper(AliyunTranscriber(), max_duration_seconds=AliyunTranscriber.MAX_AUDIO_DURATION)
     elif provider == "minimax":
         return LongAudioWrapper(MiniMaxTranscriber())
     else:
