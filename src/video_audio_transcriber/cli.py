@@ -6,7 +6,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from video_audio_transcriber.extractor import AudioExtractor, InvalidURLError
-from video_audio_transcriber.transcriber import MissingAPIKeyError, Transcriber
+from video_audio_transcriber.transcriber import MissingAPIKeyError, get_transcriber
 
 
 def main():
@@ -32,10 +32,20 @@ def main():
         choices=["chrome", "edge", "firefox", "opera", "brave"],
         help="从浏览器自动提取 cookies（需关闭对应浏览器）"
     )
+    parser.add_argument(
+        "--provider",
+        default="minimax",
+        help="ASR 引擎（可选: minimax, aliyun；默认: minimax）"
+    )
     args = parser.parse_args()
 
     extractor = AudioExtractor()
-    transcriber = Transcriber()
+
+    try:
+        transcriber = get_transcriber(args.provider)
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        sys.exit(1)
 
     cookies_path = Path(args.cookies) if args.cookies else None
 
@@ -68,8 +78,8 @@ def main():
         if audio_path.exists():
             audio_path.unlink()
             print(f"已清理音频文件: {audio_path}", file=sys.stderr)
-    except MissingAPIKeyError:
-        print("请设置环境变量 MINIMAX_ASR_KEY", file=sys.stderr)
+    except MissingAPIKeyError as e:
+        print(str(e), file=sys.stderr)
         sys.exit(1)
     except InvalidURLError as e:
         print(str(e), file=sys.stderr)

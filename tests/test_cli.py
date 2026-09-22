@@ -13,7 +13,7 @@ from video_audio_transcriber.transcriber import MissingAPIKeyError
 class TestCLI:
     def test_main_pipeline_success(self, tmp_path, capsys):
         with patch("video_audio_transcriber.cli.AudioExtractor") as mock_extractor_cls, \
-             patch("video_audio_transcriber.cli.Transcriber") as mock_transcriber_cls, \
+             patch("video_audio_transcriber.cli.get_transcriber") as mock_get_transcriber, \
              patch("video_audio_transcriber.cli.sys.argv", ["video-audio-transcribe", "https://v.douyin.com/test123/"]):
 
             mock_extractor = MagicMock()
@@ -24,7 +24,7 @@ class TestCLI:
             mock_extractor.extract.return_value = audio_path
 
             mock_transcriber = MagicMock()
-            mock_transcriber_cls.return_value = mock_transcriber
+            mock_get_transcriber.return_value = mock_transcriber
 
             api_response = {
                 "text": "大家好今天聊一下",
@@ -53,7 +53,7 @@ class TestCLI:
 
     def test_main_pipeline_cleans_up_on_error(self, tmp_path):
         with patch("video_audio_transcriber.cli.AudioExtractor") as mock_extractor_cls, \
-             patch("video_audio_transcriber.cli.Transcriber") as mock_transcriber_cls, \
+             patch("video_audio_transcriber.cli.get_transcriber") as mock_get_transcriber, \
              patch("video_audio_transcriber.cli.sys.argv", ["video-audio-transcribe", "https://v.douyin.com/test/"]):
 
             mock_extractor = MagicMock()
@@ -64,7 +64,7 @@ class TestCLI:
             mock_extractor.extract.return_value = audio_path
 
             mock_transcriber = MagicMock()
-            mock_transcriber_cls.return_value = mock_transcriber
+            mock_get_transcriber.return_value = mock_transcriber
             mock_transcriber.transcribe.side_effect = Exception("API Error")
 
             with patch("video_audio_transcriber.cli.Path.cwd", return_value=tmp_path):
@@ -74,7 +74,7 @@ class TestCLI:
 
     def test_main_output_filename_format(self, tmp_path):
         with patch("video_audio_transcriber.cli.AudioExtractor") as mock_extractor_cls, \
-             patch("video_audio_transcriber.cli.Transcriber") as mock_transcriber_cls, \
+             patch("video_audio_transcriber.cli.get_transcriber") as mock_get_transcriber, \
              patch("video_audio_transcriber.cli.sys.argv", ["video-audio-transcribe", "https://v.douyin.com/abc/"]):
 
             mock_extractor = MagicMock()
@@ -85,7 +85,7 @@ class TestCLI:
             mock_extractor.extract.return_value = audio_path
 
             mock_transcriber = MagicMock()
-            mock_transcriber_cls.return_value = mock_transcriber
+            mock_get_transcriber.return_value = mock_transcriber
 
             api_response = {"text": "测试", "segments": []}
             mock_transcriber.transcribe.return_value = (api_response, "douyin_test_id_123")
@@ -103,7 +103,7 @@ class TestCLI:
 
     def test_main_json_output_format(self, tmp_path):
         with patch("video_audio_transcriber.cli.AudioExtractor") as mock_extractor_cls, \
-             patch("video_audio_transcriber.cli.Transcriber") as mock_transcriber_cls, \
+             patch("video_audio_transcriber.cli.get_transcriber") as mock_get_transcriber, \
              patch("video_audio_transcriber.cli.sys.argv", ["video-audio-transcribe", "https://v.douyin.com/test/"]):
 
             mock_extractor = MagicMock()
@@ -114,7 +114,7 @@ class TestCLI:
             mock_extractor.extract.return_value = audio_path
 
             mock_transcriber = MagicMock()
-            mock_transcriber_cls.return_value = mock_transcriber
+            mock_get_transcriber.return_value = mock_transcriber
 
             api_response = {
                 "text": "有时间戳的文字",
@@ -188,7 +188,7 @@ class TestCLI:
 
     def test_main_progress_feedback_to_stderr(self, tmp_path, capsys):
         with patch("video_audio_transcriber.cli.AudioExtractor") as mock_extractor_cls, \
-             patch("video_audio_transcriber.cli.Transcriber") as mock_transcriber_cls, \
+             patch("video_audio_transcriber.cli.get_transcriber") as mock_get_transcriber, \
              patch("video_audio_transcriber.cli.sys.argv", ["video-audio-transcribe", "https://v.douyin.com/test/"]):
 
             mock_extractor = MagicMock()
@@ -199,7 +199,7 @@ class TestCLI:
             mock_extractor.extract.return_value = audio_path
 
             mock_transcriber = MagicMock()
-            mock_transcriber_cls.return_value = mock_transcriber
+            mock_get_transcriber.return_value = mock_transcriber
 
             api_response = {"text": "测试内容", "segments": []}
             mock_transcriber.transcribe.return_value = (api_response, "douyin_prog_test")
@@ -222,7 +222,7 @@ class TestCLI:
         custom_path = tmp_path / "my_custom_output.json"
 
         with patch("video_audio_transcriber.cli.AudioExtractor") as mock_extractor_cls, \
-             patch("video_audio_transcriber.cli.Transcriber") as mock_transcriber_cls, \
+             patch("video_audio_transcriber.cli.get_transcriber") as mock_get_transcriber, \
              patch("video_audio_transcriber.cli.sys.argv", [
                  "video-audio-transcribe", "-o", str(custom_path), "https://v.douyin.com/test/"
              ]):
@@ -235,7 +235,7 @@ class TestCLI:
             mock_extractor.extract.return_value = audio_path
 
             mock_transcriber = MagicMock()
-            mock_transcriber_cls.return_value = mock_transcriber
+            mock_get_transcriber.return_value = mock_transcriber
 
             api_response = {"text": "自定义路径测试", "segments": []}
             mock_transcriber.transcribe.return_value = (api_response, "douyin_custom_test")
@@ -251,7 +251,7 @@ class TestCLI:
         existing_file.write_text("already exists", encoding="utf-8")
 
         with patch("video_audio_transcriber.cli.AudioExtractor") as mock_extractor_cls, \
-             patch("video_audio_transcriber.cli.Transcriber") as mock_transcriber_cls, \
+             patch("video_audio_transcriber.cli.get_transcriber") as mock_get_transcriber, \
              patch("video_audio_transcriber.cli.sys.argv", [
                  "video-audio-transcribe", "-o", str(existing_file), "https://v.douyin.com/test/"
              ]):
@@ -264,7 +264,7 @@ class TestCLI:
             mock_extractor.extract.return_value = audio_path
 
             mock_transcriber = MagicMock()
-            mock_transcriber_cls.return_value = mock_transcriber
+            mock_get_transcriber.return_value = mock_transcriber
 
             api_response = {"text": "测试", "segments": []}
             mock_transcriber.transcribe.return_value = (api_response, "douyin_exist_test")
@@ -275,3 +275,49 @@ class TestCLI:
 
             captured = capsys.readouterr()
             assert "文件已存在" in captured.err
+
+    def test_main_provider_aliyun(self, tmp_path):
+        with patch("video_audio_transcriber.cli.AudioExtractor") as mock_extractor_cls, \
+             patch("video_audio_transcriber.cli.get_transcriber") as mock_get_transcriber, \
+             patch("video_audio_transcriber.cli.sys.argv", [
+                 "video-audio-transcribe", "--provider", "aliyun", "https://v.douyin.com/test/"
+             ]):
+
+            mock_extractor = MagicMock()
+            mock_extractor_cls.return_value = mock_extractor
+
+            audio_path = tmp_path / "douyin_aliyun_test.mp3"
+            audio_path.write_bytes(b"fake")
+            mock_extractor.extract.return_value = audio_path
+
+            mock_transcriber = MagicMock()
+            mock_get_transcriber.return_value = mock_transcriber
+
+            api_response = {"text": "阿里云测试", "segments": []}
+            mock_transcriber.transcribe.return_value = (api_response, "douyin_aliyun_test")
+
+            import os
+            old_cwd = os.getcwd()
+            try:
+                os.chdir(tmp_path)
+                main()
+            finally:
+                os.chdir(old_cwd)
+
+            mock_get_transcriber.assert_called_once_with("aliyun")
+
+    def test_main_invalid_provider(self, tmp_path, capsys):
+        with patch("video_audio_transcriber.cli.AudioExtractor") as mock_extractor_cls, \
+             patch("video_audio_transcriber.cli.sys.argv", [
+                 "video-audio-transcribe", "--provider", "foo", "https://v.douyin.com/test/"
+             ]):
+
+            mock_extractor = MagicMock()
+            mock_extractor_cls.return_value = mock_extractor
+
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 1
+
+            captured = capsys.readouterr()
+            assert "不支持的 provider: foo" in captured.err
